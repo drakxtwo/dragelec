@@ -1,6 +1,5 @@
 # ----------------------------------
 # emaildrag.py
-# Version 0.1
 # ----------------------------------
 import smtplib
 from email.mime.text import MIMEText
