@@ -1,0 +1,4 @@
+Open actions/ideas for dragelec
+
+* Correct error on readsensors.py
+ - the values are no longer being updated, its reading the changing value but not passing through to the main module.
