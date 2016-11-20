@@ -2,7 +2,6 @@
 # !/usr/bin/env python
 # DragElec_Main.py
 
-
 # import readWiredTemp ;# reads DS18B20 sensor
 # import updateonline ;# updates online eg plotly
 # import dragoutput ;# handles csv read/write, log files, mysql
