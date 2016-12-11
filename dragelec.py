@@ -57,7 +57,7 @@ except:
         66.00,
         66.00,
         66.00)
-
+alerttime = 300
 HighWatts = 5000
 LowWatts = 2000
 watts = TotalWatts = HiDuration = HighStart = AvgWatts = cost = RTemp = 0
@@ -113,9 +113,9 @@ try:
             if HighStart == 0:
                 HighStart = time.time()
         if HighStart != 0 and watts < LowWatts:
-            if HiDuration > 300:
-                # calculate time in seconds
-                HiDuration = int(time.time() - HighStart)
+            # calculate time in seconds
+            HiDuration = int(time.time() - HighStart)
+            if HiDuration > alerttime:
                 # calculate average watts used
                 AvgWatts = TotalWatts / (HiDuration / 6)
                 # calculate kilowatt-hours
