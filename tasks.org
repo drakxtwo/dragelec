@@ -1,28 +1,19 @@
 #+TITLE: DragElec - Tasks & notes
 #+LANGUAGE:  en
 #+AUTHOR: Lee Halls
-#+EMAIL: lhalls72@gmail.com
-#+DESCRIPTION: General information and tasks pertaining to the home monitoring system titled DragElec
+#+EMAIL: admin@drakxtwo.eu
+#+DESCRIPTION: dragelec tasks and ideas
 #+KEYWORDS:  python wireless home automation raspberrypi
 
-#+TAGS: @debug @update @improvement
+#+TAGS: option debug update improvement
 
-* check decodeXML [1/1]                                              :@debug:
-  currentcost unit had lost its connection was displaying zeros, and the python program had hung and then was very very slow to update why? thought about this at 0300 this morn... its because i use the data in from the cuurentcost to drive the rest of the program. eg
 
-  if serial.usb <> 0 then rest of program.
-
-  might be worth a what if serial.usb is dead condition.  
-
-** DONE switch off unit and re-run program <2016-11-19 Sat>
-   CLOSED: [2016-12-03 Sat 13:28]
-
-* github tasks [2/3]
-
-** DONE purchase plan <2016-11-18 Fri>                         :@improvement:
-   CLOSED: [2016-12-03 Sat 13:28]
-   confirm $6 per month and purchase
-** DONE make dragelec repository private <2016-11-18 Fri>
-   CLOSED: [2016-12-03 Sat 13:28]
-** TODO create repository for .emacs config <2016-11-18 Fri>
-   or consider using dropbox
+* TODO sql DB                                                   :improvement:
+  set up an sql DB for logging of values consider mariaDB or sqlite3
+* TODO home page                                                :improvement:
+  - improvements on layout need
+  - text on gauges is small
+  - no need for reboot/reload buttons
+    now that its moved to a flask service based on the actual pi listening to data ports instead of a dual flask system dont need the reboot/refresh buttons
+* change display                                                     :option:
+  - consider larger display perhaps similar to magic mirror, as this would allow calendar/weather data as well existing gauges
