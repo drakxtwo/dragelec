@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-# dragoutput.py
+# start of creating a single output module for all uses
+# NOT TESTED OR USED
 
 import datetime
 import time

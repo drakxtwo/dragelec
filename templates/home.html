@@ -1,0 +1,354 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
+<title>Our home</title>
+<script src="static/gauge.min.js"></script>
+    <script type="text/javascript" src="static/jquery-3.2.1.min.js"></script>
+    <script type="text/javascript" src="static/socket.io-1.3.5.min.js"></script>
+    <script type="text/javascript" charset="utf-8">
+      var myData = {};
+      var testc = 10;
+      $(document).ready(function() {
+      namespace = '/home';
+          var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + namespace);    
+          socket.on('connect', function() {
+               socket.emit('my_event', {data: 'I\'m connected!'});
+          });
+          socket.on('my_response', function(msg) {
+      $('#values').html(msg.count)
+      $('#log').append('<br>' + $('<div/>').text('Received #' + msg.data + ': ' + msg.count).html())
+      var elec = msg.elec
+      var external = msg.ext
+      var frontroom = msg.fr
+      var kitchen = msg.kt
+      var bedroom = msg.bd
+      extGauge.value = external
+      frontroomGauge.value = frontroom
+      kitchenGauge.value = kitchen
+      bedroomGauge.value = bedroom
+      elecGauge.value = elec
+            });
+       });
+    </script>
+  <!-- auto page refresh after 4hrs -->
+  <script>
+    function timedRefresh(timeoutPeriod) {
+    setTimeout("location.reload(true);",timeoutPeriod);
+    }
+    window.onload = timedRefresh(14400000);
+    //
+  </script>
+
+
+<style type="text/css">
+.auto-style2 {
+	font-family: "Gill Sans", "Gill Sans MT", Calibri, "Trebuchet MS", sans-serif;
+	text-align: left;
+}
+.auto-style3 {
+	font-size: large;
+}
+.auto-style4 {
+	font-size: xx-small;
+	font-family: "Courier New", Courier, monospace;
+}
+.auto-style5 {
+	font-size: xx-small;
+}
+.auto-style6 {
+	font-size: xx-small;
+	background-color: #FFFFFF;
+}
+.auto-style7 {
+	font-size: xx-small;
+	font-family: "Courier New", Courier, monospace;
+	background-color: #FFFFFF;
+}
+</style>
+</head>
+
+<body>
+<center>
+  <table align="center" style="width: 90%">
+	<tr>
+		<td align="center" colspan="4">
+		  <h2 class="auto-style2">OUR HOME	-	{{ time }}</h2>
+		</td>
+		<td rowspan="5 align="right">
+		  <br>
+		  <input type="button" value="Reload Page" onClick="document.location.reload(true)">
+		  <br>
+		  <br>
+		  <br>
+		    <input type="button" name="powerOFF" value="powerOFF"
+ 			   onClick="self.location.href='http://127.0.0.1:5000/powerOFF'" style="background-color:#FF0000"
+			   style="color:white; font-weight:bold"onclick>
+		  <br>
+          	  <br>
+		  <br>
+		      <input type="button" name="reBOOT" value="reBOOT"
+ 			     onClick="self.location.href='http://127.0.0.1:5000/reBOOT'" style="background-color:#F4D442"
+			     style="color:white; font-weight:bold"onclick>
+
+			<!-- <script type="text/javascript"> moWWidgetParams="moAllowUserLocation:false~moBackgroundColour:white~moColourScheme:white~moDays:3~moDomain:www.metoffice.gov.uk~moFSSI:310007~moListStyle:vertical~moMapDisplay:none~moShowFeelsLike:true~moShowUV:true~moShowWind:true~moSpecificHeight:240~moSpecificWidth:250~moSpeedUnits:M~moStartupLanguage:en~moTemperatureUnits:C~moTextColour:white~moGridParams:weather,temperature,wind,warnings~"; </script><script type="text/javascript" src="http://www.metoffice.gov.uk/public/pws/components/yoursite/loader.js"> </script> -->
+		</td>
+	</tr>
+	<tr>
+		<td align="center">
+		<span class="auto-style5">O</span><br class="auto-style5" />
+		<span class="auto-style5">U</span><br class="auto-style5" />
+		<span class="auto-style5">T</span><br class="auto-style5" />
+		<span class="auto-style5">S</span><br class="auto-style5" />
+		<span class="auto-style5">I</span><br class="auto-style5" />
+		<span class="auto-style5">D</span><br class="auto-style5" />
+		<span class="auto-style5">E</span></td>
+		<td align="center">
+    <!-- external temp -->
+    <canvas id="external-temp">  </canvas>
+    <script>
+      var extGauge = new RadialGauge({
+      renderTo: 'external-temp',
+      width: 150,
+      height: 150,
+      units: "Deg",
+      minValue: -10,
+      maxValue: 35,
+      majorTicks: [
+          "-10",
+          "5",
+          "0",
+          "5",
+          "10",
+          "15",
+          "20",
+          "25",
+          "30",
+	  "35"
+      ],
+      minorTicks: 5,
+      strokeTicks: true,
+      highlights: [
+      { from: -10, to: 0, color: 'rgba(25,0, 168, .8)'},
+      { from: 0, to: 5, color: 'rgba(47, 15, 224, .7)'},
+      { from: 5, to: 15, color: 'rgba(47, 15, 247, .6)'},
+      { from: 15, to: 18, color: 'rgba(0, 204, 61, .6)'},
+      { from: 18, to: 22, color: 'rgba(0, 204, 61, 0.9)'},
+      { from: 22, to: 26, color: 'rgba(247, 151, 7, .5)'},
+      { from: 26, to: 35, color: 'rgba(247, 31, 7, .9)'}
+      ],
+    colorPlate: "#fff",
+    borderShadowWidth: 0,
+    borders: false,
+    needleType: "arrow",
+    needleWidth: 3,
+    needleCircleSize: 10,
+    needleCircleOuter: true,
+    needleCircleInner: false,
+    animationDuration: 1500,
+    animationRule: "linear"
+    })
+      extGauge.draw();
+    </script>
+
+		</td>
+		<td align="center">
+    <!-- frontroom -->
+    <canvas id="frontroom-temp">  </canvas>
+    <script>
+      var frontroomGauge = new RadialGauge({
+      renderTo: 'frontroom-temp',
+      width: 150,
+      height: 150,
+      units: "Deg",
+      minValue: 10,
+      maxValue: 30,
+      majorTicks: [
+          "10",
+          "15",
+          "20",
+          "25",
+          "30"
+      ],
+      minorTicks: 5,
+      strokeTicks: true,
+      highlights: [
+      { from: 10, to: 15, color: 'rgba(25,0, 168, .8)'},
+      { from: 15, to: 18, color: 'rgba(47, 15, 224, .7)'},
+      { from: 17, to: 22, color: 'rgba(0, 204, 61, 0.9)'},
+      { from: 22, to: 25, color: 'rgba(247, 151, 7, .5)'},
+      { from: 25, to: 30, color: 'rgba(247, 31, 7, .9)'}
+      ],
+    colorPlate: "#fff",
+    borderShadowWidth: 0,
+    borders: false,
+    needleType: "arrow",
+    needleWidth: 3,
+    needleCircleSize: 10,
+    needleCircleOuter: true,
+    needleCircleInner: false,
+    animationDuration: 1500,
+    animationRule: "linear"
+    })
+      frontroomGauge.draw();
+    </script>
+
+		</td>
+		<td align="center"  class="auto-style5">F<br />R<br />O<br />N<br />T<br />R<br />O<br />O<br />M</td>
+	</tr>
+	<tr>
+		<td align="center" colspan="2"><strong><span class="auto-style3">{{ external }}</span></strong></td>
+		<td align="center" colspan="2"><strong><span class="auto-style3">{{ frontroom }}</span></strong></td>
+	</tr>
+	<tr>
+		<td align="center"  class="auto-style5">K<br />I<br />T<br />C<br />H<br />E<br />N<br /></td>
+		<td align="center">
+    <!-- kitchen -->
+    <canvas id="kitchen-temp">  </canvas>
+    <script>
+      var kitchenGauge = new RadialGauge({
+      renderTo: 'kitchen-temp',
+      width: 150,
+      height: 150,
+      units: "Deg",
+      minValue: 10,
+      maxValue: 30,
+      majorTicks: [
+          "10",
+          "15",
+          "20",
+          "25",
+          "30"
+      ],
+      minorTicks: 5,
+      strokeTicks: true,
+      highlights: [
+      { from: 10, to: 15, color: 'rgba(25,0, 168, .8)'},
+      { from: 15, to: 18, color: 'rgba(47, 15, 224, .7)'},
+      { from: 17, to: 22, color: 'rgba(0, 204, 61, 0.9)'},
+      { from: 22, to: 25, color: 'rgba(247, 151, 7, .5)'},
+      { from: 25, to: 30, color: 'rgba(247, 31, 7, .9)'}
+      ],
+    colorPlate: "#fff",
+    borderShadowWidth: 0,
+    borders: false,
+    needleType: "arrow",
+    needleWidth: 3,
+    needleCircleSize: 10,
+    needleCircleOuter: true,
+    needleCircleInner: false,
+    animationDuration: 1500,
+    animationRule: "linear"
+    })
+      kitchenGauge.draw();
+    </script>
+
+		</td>
+		<td align="center">
+    <!-- bedroom -->
+    <canvas id="bedroom-temp">  </canvas>
+    <script>
+      var bedroomGauge = new RadialGauge({
+      renderTo: 'bedroom-temp',
+      width: 150,
+      height: 150,
+      units: "Deg",
+      minValue: 10,
+      maxValue: 30,
+      majorTicks: [
+          "10",
+          "15",
+          "20",
+          "25",
+          "30"
+      ],
+      minorTicks: 5,
+      strokeTicks: true,
+      highlights: [
+       { from: 10, to: 15, color: 'rgba(25,0, 168, .8)'},
+      { from: 15, to: 20, color: 'rgba(0, 204, 64, .9)'},
+      { from: 20, to: 24, color: 'rgba(247, 151, 7, .5)'},
+      { from: 24, to: 30, color: 'rgba(247, 31, 7, .9)'}
+      ],
+    colorPlate: "#fff",
+    borderShadowWidth: 0,
+    borders: false,
+    needleType: "arrow",
+    needleWidth: 3,
+    needleCircleSize: 10,
+    needleCircleOuter: true,
+    needleCircleInner: false,
+    animationDuration: 1500,
+    animationRule: "linear"
+    })
+      bedroomGauge.draw();
+    </script>
+
+		</td>
+		<td align="center" class="auto-style5">B<br />E<br />D<br />T<br />R<br />O<br />O<br />M</td>
+	</tr>
+	<tr>
+		<td align="center" colspan="2"><strong><span class="auto-style3">{{ kitchen }}</span></strong></td>
+		<td align="center" colspan="2"><strong><span class="auto-style3">{{ bedroom }}</span></strong></td>
+	</tr>
+	<tr>
+		<td align="center" colspan="5">
+		    <canvas id='electricity'></canvas>
+    <script>
+      var elecGauge = new LinearGauge({
+      renderTo: 'electricity',
+      width: 800,
+      height: 80,
+      minValue: 0,
+      maxValue: 8000,
+      majorTicks: [
+          "0",
+          "1000",
+          "2000",
+          "3000",
+          "4000",
+          "5000",
+          "6000",
+          "7000",
+          "8000",
+      ],
+    minorTicks: 10,
+    strokeTicks: true,
+    colorPlate: "#fff",
+    borderShadowWidth: 0,
+    borders: false,
+    barBeginCircle: false,
+    tickSide: "left",
+    numberSide: "left",
+    needleSide: "left",
+    needleType: "line",
+    needleWidth: 3,
+      colorNeedle: "#222",
+      barWidth: "8",
+      colorBar: "#ffffff",
+      colorBarStroke: "#03bc2e",
+      colorBarProgress: "#fc0a02",
+      animationDuration: 1500,
+      animationRule: "linear",
+      animationTarget: "plate",      
+      highlights: [
+      { from: 0, to: 500, color: 'rgba(107,194, 19, .9)'},
+      { from: 500, to: 1500, color: 'rgba(247, 239, 7, .5)'},
+      { from: 1500, to: 4000, color: 'rgba(247, 151, 7, .5)'},
+      { from: 4000, to: 8000, color: 'rgba(247, 31, 7, .5)'}
+      ],
+    })
+      elecGauge.draw();
+    </script>
+	</td>
+	</tr>
+	<tr>
+		<td align="center" colspan="2">
+</td>
+	</tr>
+</table>
+</center>
+		</body>
+
+</html>

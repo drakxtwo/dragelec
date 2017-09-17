@@ -1,184 +1,112 @@
-
 # !/usr/bin/env python
-# DragElec_Main.py
-
-# import readWiredTemp ;# reads DS18B20 sensor
-# import updateonline ;# updates online eg plotly
-# import dragoutput ;# handles csv read/write, log files, mysql
-import emaildrag  # sends alert emails
 import raspitemp  # Raspberry CPU Temp reader
 import readsensors  # reads wireless sensors
 import decodexml  # reads & decodes the currentcost xml string
-import datetime
-import time
-import logging
-import logging.handlers
+import datetime, time
+import serial
+from flask import Flask, render_template
+from flask_socketio import SocketIO, emit
+from random import randint
+import pdb
 import csv
-import credentials
-from ISStreamer.Streamer import Streamer
-
-debug = 0
 
 # (aABTEMP,aACTEMP,aADTEMP,aAETEMP,aAZLIGHT,aABBATT,aACBATT,aADBATT,aAEBATT,aAZBATT)
 # AE - Bedroom, AB - Front room,AD - Kitchen,AC - External,AZ - Light level
 
-# set up initial state streamer
-b_name = credentials.in_login['bucketname']
-b_key = credentials.in_login['bucketkey']
-a_key = credentials.in_login['accesskey']
-if debug == 1:
-    print(b_name, b_key, a_key)
-streamer = Streamer(bucket_name=b_name, bucket_key=b_key,
-                    access_key=a_key, debug_level=0)
+#SensorValues = (0,0,0,0,0,0,0,0,0,0)
 
+async_mode = None
 
-# logfile handling section
-loghandler = logging.handlers.TimedRotatingFileHandler(
-    "/media/nas_documents/elec_logfiles/DragElec", when="w6")
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-logger.addHandler(loghandler)
+app = Flask(__name__)
+app.config['SECRET_KEY'] = 'secret!'
+socketio = SocketIO(app, async_mode=async_mode)
+thread = None
 
-# read in stored values & initialise preset values
-try:
-    with open('/tmp/tmpvalues.csv', 'r') as csvfile:
-        fileRead = csv.reader(csvfile, delimiter=',')
-        for row in fileRead:
-            SensorValues = [float(x) for x in row if x != '']
-except:
-    SensorValues = (
-        66.00,
-        66.00,
-        66.00,
-        66.00,
-        66.00,
-        66.00,
-        66.00,
-        66.00,
-        66.00,
-        66.00)
-alerttime = 300
-HighWatts = 5000
-LowWatts = 2000
-watts = TotalWatts = HiDuration = HighStart = AvgWatts = cost = RTemp = 0
-updateonlinetime = time.time()
-
-if debug == 1:
-    print(SensorValues)
-    print("HighWatts:%.0f LowWatts:%.0f"
-          "updateonlinetime:%.0f") % (HighWatts, LowWatts, updateonlinetime)
-
-print("")
-print("---------------------------------------------------")
-print("---------------------------------------------------")
-print("----        STARTING DragElec MONITORING       ----")
-print("--------------- %s %s ---------------" %
-      (datetime.date.today(), time.strftime("%H:%M:%S")))
-print("---------------------------------------------------")
-print("")
-try:
+def background_thread():
+    alerttime = 300
+    HighWatts = 5000
+    LowWatts = 2000
+    watts = TotalWatts = HiDuration = HighStart = AvgWatts = cost = RTemp = 0
+    global ser
+    global SensorValues
     while True:
-        time.sleep(1)
-        today = datetime.date.today()
-        # aABTEMP,aACTEMP,aADTEMP,aAETEMP,aAZLIGHT, /
-        # aABBATT,aACBATT,aADBATT,aAEBATT,aAZBATT)
-        SensorValues = readsensors.readWireless(
-            SensorValues[0],
-            SensorValues[1],
-            SensorValues[2],
-            SensorValues[3],
-            SensorValues[4],
-            SensorValues[5],
-            SensorValues[6],
-            SensorValues[7],
-            SensorValues[8],
-            SensorValues[9])
+        n = ser.inWaiting()
+        if n != 0:
+            USBTemps = ser.read(n)
+            # print(USBTemps)
+            SensorValues = readsensors.valueCheck(
+                USBTemps,
+                SensorValues[0],
+                SensorValues[1],
+                SensorValues[2],
+                SensorValues[3],
+                SensorValues[4],
+                SensorValues[5],
+                SensorValues[6],
+                SensorValues[7],
+                SensorValues[8],
+                SensorValues[9])
+        else:
+            USBTemps=""
+
+        #watts = randint(0,8000)
+        frontroom = 66.00
+        bedroom = 66.00
+        kitchen = 66.00
+        external = 66.00     
         watts = decodexml.decodexml(watts)
         RTemp = raspitemp.PiTemp(RTemp)
-        print(
-            "%s-%s: Rpi:%.1f Watts:%.1f - FR:%.2f-EXT:%.2f-KT:%.2f"
-            "-BD:%.2f-Light:%.2f" %
-            (today,
-             time.strftime("%H:%M:%S"),
-             RTemp,
-             watts,
-             SensorValues[0],
-             SensorValues[1],
-             SensorValues[2],
-             SensorValues[3],
-             SensorValues[4]))
+        socketio.sleep(1)
+        socketio.emit('my_response',
+                      {'data':'Values', 'elec': watts,'ext': SensorValues[1],'fr': SensorValues[0],'bd': SensorValues[3],'kt': SensorValues[2]},
+                      namespace='/home')
 
-        if watts > HighWatts:
-            TotalWatts = TotalWatts + watts
-            if HighStart == 0:
-                HighStart = time.time()
-        if HighStart != 0 and watts < LowWatts:
-            # calculate time in seconds
-            HiDuration = int(time.time() - HighStart)
-            if HiDuration > alerttime:
-                # calculate average watts used
-                AvgWatts = TotalWatts / (HiDuration / 6)
-                # calculate kilowatt-hours
-                kWH = (AvgWatts / 1000) * (HiDuration / 3600)
-                cost = kWH * 0.1618  # cost of kilowatt-hours
-                if debug == 1:
-                    # print("Start:%.2f - Duration:%.2f - End:%.2f" %
-                    #      (HighStart, HiDuration, int(time.time())))
-                    pass
-                mailSent = emaildrag.PrepMail(
-                    1,
-                    HiDuration,
-                    AvgWatts,
-                    cost,
-                    SensorValues[0],
-                    SensorValues[1],
-                    SensorValues[2],
-                    SensorValues[3],
-                    SensorValues[4])
-                print("Mail sent msg: ", mailSent)
-                TotalWatts = HiDuration = HighStart = AvgWatts = cost = 0
-            else:
-                TotalWatts = HiDuration = HighStart = AvgWatts = cost = 0
-        if time.time() > updateonlinetime + 14400:
-            updateonlinetime = time.time()
-            # output to online service
-            # onlineResponse = updateonline.updateThingspeak(
-            # SensorValues[0],SensorValues[1],SensorValues[2],SensorValues[3])
-            # output to logfile
-            print("Output to sources")
-            logger.info(
-                "%s,%s,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,"
-                "%.2f,%.2f,%.2f" %
-                (time.strftime("%d/%m/%Y"), time.strftime("%H:%M:%S"),
-                    RTemp,
-                    watts,
-                    SensorValues[0],
-                    SensorValues[1],
-                    SensorValues[2],
-                    SensorValues[3],
-                    SensorValues[4],
-                    SensorValues[5],
-                    SensorValues[6],
-                    SensorValues[7],
-                    SensorValues[8],
-                    SensorValues[9]))
 
-            # update initial state
-            streamer.log("Front room", SensorValues[0])
-            streamer.log("Kitchen", SensorValues[2])
-            streamer.log("Bedroom", SensorValues[3])
-            streamer.log("External", SensorValues[1])
-            streamer.flush()
-            # write sensor values to temp file for retrieval
-            try:
-                # with python2 need 'wb' not 'w'
-                with open('/tmp/tmpvalues.csv', 'wb') as csvfile:
-                    fileWrite = csv.writer(
-                        csvfile, delimiter=',', quotechar='|')
-                    fileWrite.writerow(SensorValues)
-            finally:
-                csvfile.close()
+mesg = 'starting dragelec'
+@app.route('/')
+def index():
+    today = datetime.date.today()
+    templateData={
+        'mesg' :mesg,
+        'time' :today
+    }
+    return render_template('home.html', async_mode=socketio.async_mode, **templateData)
 
-except KeyboardInterrupt:
-    streamer.close()
-    print("  Quit")
+@socketio.on('connect', namespace='/home')
+def test_connect():
+    global thread
+    if thread is None:
+        thread = socketio.start_background_task(target=background_thread)
+
+if __name__ == '__main__':
+
+    global SensorValues
+    global ser
+    print("")
+    print("---------------------------------------------------")
+    print("---------------------------------------------------")
+    print("----        STARTING DragElec MONITORING       ----")
+    print("--------------- %s %s ---------------" %
+          (datetime.date.today(), time.strftime("%H:%M:%S")))
+    print("---------------------------------------------------")
+    print("")
+    ser = serial.Serial('/dev/ttyACM0', 9600)
+    updateonlinetime = time.time()
+    try:
+        with open('/tmp/tmpvalues.csv', 'r') as csvfile:
+            fileRead = csv.reader(csvfile, delimiter=',')
+            for row in fileRead:
+                SensorValues = [float(x) for x in row if x != '']
+    except:
+        SensorValues = (
+            66.00,
+            66.00,
+            66.00,
+            66.00,
+            66.00,
+            66.00,
+            66.00,
+            66.00,
+            66.00,
+            66.00)
+    socketio.run(app, host='0.0.0.0', debug=True)

@@ -1,0 +1,259 @@
+#+TITLE: Dragelec - monitoring the home
+#+LANGUAGE:  en
+#+STARTUP: inlineimages
+#+AUTHOR: Lee Halls
+#+EMAIL: admin@drakxtwo.eu
+#+DESCRIPTION: A home electricity and temperature monitor or smart meter
+#+TAGS: project raspberrypi python electricity temperature
+#+DATE: 2017-07-30T18:40:05
+#+TAGS: ["python" "raspberrypi" "electricity" "smart meter"]
+
+The */dragelec/* project has been live for over five years initially it was created out of a need to prove that the step-son was taking 45min - 90min showers...... so it simply monitored for electricity usage > 7kw for a fews minutes then emailed me. Over time i added graphs, then temperatures around the house and outside, then an online service. I tried RRD, sql databases and csv files for recording data but currently *dragelec* is run on a single Raspberry Pi using a currentcost electricity clamp, it runs as *flask* based website serving *canvas gauges* that react in realtime via *socketio* so that i have a live dashboard of information which can be viewed by any device using the pi's local IP address. Strangely enough :) i use another Pi mounted on an official touchscreen as the main dashboard in the kitchen and media player (mostly playing a Polish radio station using mpc).
+
+So the code - it's broken down into the main function and a few submodules that i've written plus normal ones.
+
+#+BEGIN_SRC VERSE
+drag_socktio
+ - raspitemp
+ - readsensors
+ - decodexml
+ - datetime, time
+ - serial
+ - flask_socketio
+ - flask
+ - pdb
+ - csv
+#+END_SRC
+
+Each module is listed here with an exlanation of what it does (pretty obvious really) and the hardware setup used to achieve it.
+
+* drag_socketio - the main module
+
+** TODO - <2017-08-27 Sun> update document
+   this is in progress some elements are lacking as its under going a total re-write
+
+
+Running on a standard raspberry pi, the main code supplies a flask based website using socketio to update in "realtime" gauges for temperature and electricity. There is a 1sec lag between the electricity consumption increasing and the gauge reacting, with the temperature gauges only change when a new value is received from the sensors.
+
+Set up the general flask parameters
+
+#+BEGIN_SRC python
+async_mode = None
+
+app = Flask(__name__)
+app.config['SECRET_KEY'] = 'secret!'
+socketio = SocketIO(app, async_mode=async_mode)
+thread = None
+#+END_SRC
+
+The background thread which does all the heavy lifting;
+
+#+BEGIN_SRC python
+def background_thread():
+    alerttime = 300
+    HighWatts = 5000
+    LowWatts = 2000
+    watts = TotalWatts = HiDuration = HighStart = AvgWatts = cost = RTemp = 0
+    global ser
+    global SensorValues
+    while True:
+        n = ser.inWaiting()
+        if n != 0:
+            USBTemps = ser.read(n)
+            # print(USBTemps)
+            SensorValues = readsensors.valueCheck(
+                USBTemps,
+                SensorValues[0],
+                SensorValues[1],
+                SensorValues[2],
+                SensorValues[3],
+                SensorValues[4],
+                SensorValues[5],
+                SensorValues[6],
+                SensorValues[7],
+                SensorValues[8],
+                SensorValues[9])
+        else:
+            USBTemps=""
+
+        #watts = randint(0,8000)
+        frontroom = randint(0,22)
+        bedroom = randint(0,22)
+        kitchen = randint(0,22)
+        external = randint(0,22)
+        
+        watts = decodexml.decodexml(watts)
+        #pdb.set_trace()
+        RTemp = raspitemp.PiTemp(RTemp)
+        socketio.sleep(1)
+        socketio.emit('my_response',
+                      {'data':'Values', 'elec': watts,'ext': SensorValues[1],'fr': SensorValues[0],'bd': SensorValues[3],'kt': SensorValues[2]},
+                      namespace='/carpi')
+#+END_SRC
+
+Routing and data for the index page (currently has data from a car digital dashboard project) 
+
+** TODO remove data for car dash and re-write specifically for dragelec
+
+#+BEGIN_SRC python
+mesg = 'starting dragelec'
+@app.route('/')
+def index():
+    today = datetime.date.today()
+    speed = randint(0,133)
+    templateData={
+        'mesg' :mesg,
+        'speed' :speed,
+        'time' :today
+    }
+    return render_template('home.html', async_mode=socketio.async_mode, **templateData)
+#+END_SRC
+
+#+BEGIN_SRC python
+@socketio.on('connect', namespace='/carpi')
+def test_connect():
+    global thread
+    if thread is None:
+        thread = socketio.start_background_task(target=background_thread)
+
+if __name__ == '__main__':
+
+    global SensorValues
+    global ser
+    print("")
+    print("---------------------------------------------------")
+    print("---------------------------------------------------")
+    print("----        STARTING DragElec MONITORING       ----")
+    print("--------------- %s %s ---------------" %
+          (datetime.date.today(), time.strftime("%H:%M:%S")))
+    print("---------------------------------------------------")
+    print("")
+    ser = serial.Serial('/dev/ttyACM0', 9600)
+    updateonlinetime = time.time()
+    try:
+        with open('/tmp/tmpvalues.csv', 'r') as csvfile:
+            fileRead = csv.reader(csvfile, delimiter=',')
+            for row in fileRead:
+                SensorValues = [float(x) for x in row if x != '']
+    except:
+        SensorValues = (
+            66.00,
+            66.00,
+            66.00,
+            66.00,
+            66.00,
+            66.00,
+            66.00,
+            66.00,
+            66.00,
+            66.00)
+    socketio.run(app, host='0.0.0.0', debug=True)
+
+#+END_SRC
+
+* rasPitemp - reading the Pi's temperature
+
+#+BEGIN_SRC python
+#!/usr/bin/env python
+def PiTemp(RTemp):
+    import os
+    # Return CPU temperature as a character string
+
+    def getCPUtemperature():
+        res = os.popen('vcgencmd measure_temp').readline()
+        return(res.replace("temp=", "").replace("'C\n", ""))
+
+    temp1 = int(float(getCPUtemperature()))
+
+    return (temp1)
+#+END_SRC
+
+* readwireless - receiving and using the values from wireless sensors
+
+The wireless sensors used are unfortunately no longer available, the company (ciseco) simply vanished from existence along with all the documentation/firmware etc which is a shame as the wireless sensors were not expensive and have proven very good.
+
+[[file:dragelec/xrf-300x300.jpg]]
+
+They use a protocol called LLAP (Lightweight Local Automation Protocol) essentially each device is programmed with the appropriate firmware and set to broadcast data on an interval. The transmitted data looks like ~aACTMPA18.78~ which is the device identifier (AC) and the data being sent (TMP18.78)
+
+The main program polls the serial port for incoming data 
+
+#+BEGIN_SRC python
+    while True:
+        n = ser.inWaiting()
+        if n != 0:
+            USBTemps = ser.read(n)
+#+END_SRC
+
+and if a message exists it passes the content to the readwireless module;
+
+#+BEGIN_SRC python
+            SensorValues = readsensors.valueCheck(
+                USBTemps,
+                SensorValues[0],
+                SensorValues[1],
+                SensorValues[2],
+                SensorValues[3],
+                SensorValues[4],
+                SensorValues[5],
+                SensorValues[6],
+                SensorValues[7],
+                SensorValues[8],
+                SensorValues[9])
+#+END_SRC
+
+which then returns the individual values of temperature and battery level for each sensor, it does this by searching the incoming message for the identifier of each sensor and then parsing out the values eg;
+
+#+BEGIN_SRC python
+    if "ABT" in llapMsg:
+        # front room temp
+        try:
+            aABTEMP = float(llapMsg[7:12])
+            print("AB temp level = %.2f - detected at %s " %
+                  (aABTEMP, time.strftime("%H:%M:%S")))
+        except:
+            print(
+                "Cannot decode - msg detected: %s - detected at %s " %
+                (llapMsg, time.strftime("%H:%M:%S")))
+    if "ABB" in llapMsg:
+        try:
+            aABBATT = float(llapMsg[31:35])
+            print(
+                "AB Battery level = %.2f - detected at %s " %
+                (aABBATT, time.strftime("%H:%M:%S")))
+        except ValueError:
+            print("aABBATT Conversion ERROR:", llapMsg)
+#+END_SRC
+
+the above looks for the data coming from the sensor i've given the id of AB, it checks for the temperature string (ABT) and the battery data (ABB) then assigns it to the appropriately titled variable. The code is mostly duplicates of the above for each sensor with the final part being to return the values to the main program, i'm sure there is a way of writing it such that i can remove the duplication element but at the moment this works and i dont know how so for now it stays.
+
+** TODO remove code duplication
+
+I've set up the sensors as follows;
+
+| ID | Location    |
+|----+-------------|
+| AE | Bedroom     |
+| AB | Front room  |
+| AD | Kitchen     |
+| AC | External    |
+| AZ | Light level |
+
+
+As i run the main program via a tmux session i can log in at any time and see what is being printed so i get nice easy way of checking for errors.
+
+[[file:dragelec/pidragElec.png]]
+
+* decodexml - reading a currentcost meter
+The electricity monitoring is done using a [[http://www.currentcost.com/][currentcost]] unit
+
+[[file:dragelec/currentcost_envi.png]]
+
+this relies on a current transformer clamped around the mains incoming supply and the data from the actual currentcost unit is output in XML format.
+
+[[file:dragelec/currentcost_xml.png]] 
+
+** TODO They now also sell a domestic gas adaptor which i intend to add at some point. [[http://www.currentcost.com/gasmart.html][gaSmart]]
+
+
+

@@ -1,85 +1,7 @@
 # ----------------------------------
-# reads wireless sensors
+# decodes the data string from
+# the wireless sensors
 # ----------------------------------
-
-
-def readWireless(
-        aABTEMP,
-        aACTEMP,
-        aADTEMP,
-        aAETEMP,
-        aAZLIGHT,
-        aABBATT,
-        aACBATT,
-        aADBATT,
-        aAEBATT,
-        aAZBATT):
-    import serial
-    import time
-    debug = 0
-
-    USBTemps = serial.Serial('/dev/ttyACM0', 38400)
-
-    time.sleep(0.5)
-    if USBTemps.inWaiting() > 0:
-        llapMsg = USBTemps.read(USBTemps.inWaiting())
-        # decode from bytes to string
-        llapMsg = llapMsg.decode(encoding='UTF-8')
-
-        if debug == 1:
-            print(len(llapMsg), llapMsg)
-        if len(llapMsg) == 12 or len(llapMsg) == 36 or len(llapMsg) == 48:
-            sensorValues = valueCheck(
-                llapMsg,
-                aABTEMP,
-                aACTEMP,
-                aADTEMP,
-                aAETEMP,
-                aAZLIGHT,
-                aABBATT,
-                aACBATT,
-                aADBATT,
-                aAEBATT,
-                aAZBATT)
-        else:
-            print("need to debug message received: ", len(llapMsg), llapMsg)
-            sensorValues = (
-                aABTEMP,
-                aACTEMP,
-                aADTEMP,
-                aAETEMP,
-                aAZLIGHT,
-                aABBATT,
-                aACBATT,
-                aADBATT,
-                aAEBATT,
-                aAZBATT)
-            # battcheck(llapMsg)
-    else:
-        sensorValues = (
-            aABTEMP,
-            aACTEMP,
-            aADTEMP,
-            aAETEMP,
-            aAZLIGHT,
-            aABBATT,
-            aACBATT,
-            aADBATT,
-            aAEBATT,
-            aAZBATT)
-
-    return (
-            sensorValues[0],
-            sensorValues[1],
-            sensorValues[2],
-            sensorValues[3],
-            sensorValues[4],
-            sensorValues[5],
-            sensorValues[6],
-            sensorValues[7],
-            sensorValues[8],
-            sensorValues[9])
-
 
 def valueCheck(
         llapMsg,
@@ -192,17 +114,17 @@ def valueCheck(
         except ValueError:
             print("aAZBATT Conversion ERROR:", llapMsg)
 
-    if "LOW" in llapMsg:
-        if "aAB" in llapMsg:
-            emaildrag.PrepMail(4, "AB BattLOW", aABBATT, 0, 0, 0, 0, 0, 0)
-        if "aAC" in llapMsg:
-            emaildrag.PrepMail(4, "AC BattLOW", aACBATT, 0, 0, 0, 0, 0, 0)
-        if "aAD" in llapMsg:
-            emaildrag.PrepMail(4, "AD BattLOW", aADBATT, 0, 0, 0, 0, 0, 0)
-        if "aAE" in llapMsg:
-            emaildrag.PrepMail(4, "AE BattLOW", aAEBATT, 0, 0, 0, 0, 0, 0)
-        if "aAZ" in llapMsg:
-            emaildrag.PrepMail(4, "AZ BattLOW", aAEBATT, 0, 0, 0, 0, 0, 0)
+    # if "LOW" in llapMsg:
+    #    if "aAB" in llapMsg:
+    #        emaildrag.PrepMail(4, "AB BattLOW", aABBATT, 0, 0, 0, 0, 0, 0)
+    #    if "aAC" in llapMsg:
+    #        emaildrag.PrepMail(4, "AC BattLOW", aACBATT, 0, 0, 0, 0, 0, 0)
+    #    if "aAD" in llapMsg:
+    #        emaildrag.PrepMail(4, "AD BattLOW", aADBATT, 0, 0, 0, 0, 0, 0)
+    #    if "aAE" in llapMsg:
+    #        emaildrag.PrepMail(4, "AE BattLOW", aAEBATT, 0, 0, 0, 0, 0, 0)
+    #    if "aAZ" in llapMsg:
+    #        emaildrag.PrepMail(4, "AZ BattLOW", aAEBATT, 0, 0, 0, 0, 0, 0)
 
     return (
         aABTEMP,

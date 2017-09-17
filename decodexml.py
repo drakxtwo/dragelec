@@ -9,15 +9,18 @@ def decodexml(prev_watts):
     import xml.etree.ElementTree as ET
     from xml.etree.ElementTree import ParseError
     debug = 0
-    elecSER = serial.Serial('/dev/ttyUSB0', 57600)  # currentCost
+    try:
+        elecSER = serial.Serial('/dev/ttyUSB0', 57600)  # currentCost
+    except:
+        ch1_watts = prev_watts
+        print("Already open")
     try:
         LineIn = elecSER.readline()
+        CC_XML_String = ET.fromstring(LineIn)
         if debug == 1:
             print("")
             print(LineIn)
             print("")
-
-        CC_XML_String = ET.fromstring(LineIn)
         if CC_XML_String.find('ch1') is None:
             ch1_watts = prev_watts
         else:
@@ -33,8 +36,9 @@ def decodexml(prev_watts):
                     sensor,
                     CCostTemp,
                     ch1_watts)
-    except ParseError:
+    except:
         ch1_watts = prev_watts
-        print(" XML ParseError received: ", LineIn)
+
+
 
     return (ch1_watts)
