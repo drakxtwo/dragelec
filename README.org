@@ -8,9 +8,9 @@
 #+DATE: 2017-07-30T18:40:05
 #+TAGS: ["python" "raspberrypi" "electricity" "smart meter"]
 
-The */dragelec/* project has been live for over five years initially it was created out of a need to prove that the step-son was taking 45min - 90min showers...... so it simply monitored for electricity usage > 7kw for a fews minutes then emailed me. Over time i added graphs, then temperatures around the house and outside, then an online service. I tried RRD, sql databases and csv files for recording data but currently *dragelec* is run on a single Raspberry Pi using a currentcost electricity clamp, it runs as *flask* based website serving *canvas gauges* that react in realtime via *socketio* so that i have a live dashboard of information which can be viewed by any device using the pi's local IP address. Strangely enough :) i use another Pi mounted on an official touchscreen as the main dashboard in the kitchen and media player (mostly playing a Polish radio station using mpc).
+The */dragelec/* project has been live for over five years initially it was created out of a need to prove that the step-son was taking 45min - 90min showers...... so it simply monitored for electricity usage > 7kw for a fews minutes then emailed me. Over time i added graphs, then temperatures around the house and outside, then an online service. Over the years I have tried RRD, sql databases, log files and csv files for recording data but currently *dragelec* is run on a single Raspberry Pi, it runs as *flask* based website serving canvas gauges that react in realtime via socketio so that i have a live dashboard of information which can be viewed by any device using the pi's local IP address but strangely enough :) i use another Pi mounted on an official touchscreen as the main dashboard and media player in the kitchen (mostly playing a Polish radio station using mpc).
 
-So the code - it's broken down into the main function and a few submodules that i've written plus normal ones.
+So the code;
 
 #+BEGIN_SRC VERSE
 drag_socktio
@@ -29,13 +29,9 @@ Each module is listed here with an exlanation of what it does (pretty obvious re
 
 * drag_socketio - the main module
 
-** TODO - <2017-08-27 Sun> update document
-   this is in progress some elements are lacking as its under going a total re-write
+The main code supplies a flask based website using socketio to update in "realtime" gauges for temperature and electricity. There is a 1sec lag between the electricity consumption increasing and the gauge reacting, with the temperature gauges only updating when a new value is received from the sensors.
 
-
-Running on a standard raspberry pi, the main code supplies a flask based website using socketio to update in "realtime" gauges for temperature and electricity. There is a 1sec lag between the electricity consumption increasing and the gauge reacting, with the temperature gauges only change when a new value is received from the sensors.
-
-Set up the general flask parameters
+Set up the general flask parameters;
 
 #+BEGIN_SRC python
 async_mode = None
@@ -77,40 +73,35 @@ def background_thread():
             USBTemps=""
 
         #watts = randint(0,8000)
-        frontroom = randint(0,22)
-        bedroom = randint(0,22)
-        kitchen = randint(0,22)
-        external = randint(0,22)
+        frontroom = 66.00
+        bedroom = 66.00
+        kitchen = 66.00
+        external = 66.00
         
         watts = decodexml.decodexml(watts)
-        #pdb.set_trace()
         RTemp = raspitemp.PiTemp(RTemp)
         socketio.sleep(1)
         socketio.emit('my_response',
                       {'data':'Values', 'elec': watts,'ext': SensorValues[1],'fr': SensorValues[0],'bd': SensorValues[3],'kt': SensorValues[2]},
-                      namespace='/carpi')
+                      namespace='/home')
 #+END_SRC
 
 Routing and data for the index page (currently has data from a car digital dashboard project) 
-
-** TODO remove data for car dash and re-write specifically for dragelec
 
 #+BEGIN_SRC python
 mesg = 'starting dragelec'
 @app.route('/')
 def index():
     today = datetime.date.today()
-    speed = randint(0,133)
     templateData={
         'mesg' :mesg,
-        'speed' :speed,
         'time' :today
     }
     return render_template('home.html', async_mode=socketio.async_mode, **templateData)
 #+END_SRC
 
 #+BEGIN_SRC python
-@socketio.on('connect', namespace='/carpi')
+@socketio.on('connect', namespace='/home')
 def test_connect():
     global thread
     if thread is None:
