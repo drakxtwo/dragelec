@@ -8,6 +8,14 @@
 #+DATE: 2017-07-30T18:40:05
 #+TAGS: ["python" "raspberrypi" "electricity" "smart meter"]
 
+[2018-08-23 Thu 14:40] This document needs a major re-write there have been many changes over the last twelve months for example;
+
+ - change to a dictionary for storage of the variables.
+ - finally settling on sqlite for storage of values
+ - removal of electricity monitoring due to loss of clamp during house move
+
+*OLD LEVEL DOCUMENT*
+
 The */dragelec/* project has been live for over five years initially it was created out of a need to prove that the step-son was taking 45min - 90min showers...... so it simply monitored for electricity usage > 7kw for a fews minutes then emailed me. Over time i added graphs, then temperatures around the house and outside, then an online service. Over the years I have tried RRD, sql databases, log files and csv files for recording data but currently dragelec is run on a single Raspberry Pi, it runs as *flask* based website serving canvas gauges that react in realtime via *socketio* so that i have a live dashboard of information which can be viewed by any device using the pi's local IP address but strangely enough :) i use another Pi mounted on an official touchscreen as the main dashboard and media player in the kitchen (mostly playing a Polish radio station using mpc).
 
 So the code;
